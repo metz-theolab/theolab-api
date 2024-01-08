@@ -1,0 +1,16 @@
+
+venv
+.vscode
+.coverage
+coverage-report
+dist/
+**/.mutmut-cache
+**/.mypy_cache
+**/.pytest_cache
+**/__pycache__
+**/*.egg-info
+**/*.pyc
+**/.DS_Store
+*.sql
+meeting_notes*
+**/build

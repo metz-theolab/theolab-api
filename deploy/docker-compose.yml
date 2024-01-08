@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: "mariadb"
+    volumes:
+      - ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MYSQL_DATABASE: QD
+    ports:
+      - 3306:3306
+
+  db-admin:
+    image: "phpmyadmin"
+    ports:
+      - 8080:80
