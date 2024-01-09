@@ -26,3 +26,9 @@ class SQLClient:
         if not self._database:
             raise RuntimeError("Database is not yet connected.")
         return self._database
+
+    @staticmethod
+    def format_query(query: str):
+        """Format an SQL query.
+        """
+        return " ".join(query.replace("\n", " ").strip().split())

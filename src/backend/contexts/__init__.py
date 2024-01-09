@@ -1,3 +1,4 @@
+from fastapi import Request
 from .manuscripts.router import router as manuscript_router
 from .text.router import router as text_router
 from .manuscripts.db import ManuscriptClient

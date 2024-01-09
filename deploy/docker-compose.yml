@@ -4,9 +4,11 @@ services:
   db:
     image: "mariadb"
     volumes:
-      - ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
+      # In test mode, only deploy the test database for confidentiality issues
+      - ./dump/test_dump.sql:/docker-entrypoint-initdb.d/QD.sql
+      # - ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
     environment:
-      MARIADB_ROOT_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: root # change in production
       MYSQL_DATABASE: QD
     ports:
       - 3306:3306

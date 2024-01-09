@@ -11,6 +11,6 @@ dist/
 **/*.egg-info
 **/*.pyc
 **/.DS_Store
-*.sql
+QD.sql
 meeting_notes*
 **/build

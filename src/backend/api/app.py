@@ -3,7 +3,7 @@
 import contextlib
 import typing as t
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic_settings import BaseSettings
 
 
@@ -37,10 +37,13 @@ def create_app(settings: t.Optional[AppSettings] = None) -> FastAPI:
     # Create fastapi instance
     app = FastAPI(lifespan=lifespan)
 
+    # Attach db to app state
+    app.state.database = db
+
     # Include routers
     for router in ROUTERS:
-        print("including router")
         app.include_router(router)
 
     # Return new application instance
     return app
+
