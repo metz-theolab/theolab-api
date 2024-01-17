@@ -97,3 +97,11 @@ class TestRetrieveManuscript(unittest.TestCase):
             response = client.get("/manuscript/unknown/display")
             self.assertEqual(response.status_code, 404)
             self.assertEqual(response.text, "Manuscript unknown not found.")
+
+    def test_retrieve_distinct_manuscripts(self):
+        """Tests that distinct manuscripts are properly retrieved.
+        """
+        with test_client as client:
+            response = client.get("/manuscript")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {"manuscripts": ["4Q157"]})

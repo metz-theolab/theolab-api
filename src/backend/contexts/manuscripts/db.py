@@ -64,6 +64,13 @@ class ManuscriptClient(SQLClient):
                 SELECT DISTINCT {MANUSCRIPT_TABLE}.{attribute} FROM {MANUSCRIPT_TABLE} WHERE {MANUSCRIPT_TABLE}.manuscript = '{manuscript_name}'
                 """)
     
+    def distinct_manuscript_query(self):
+        """List all manuscripts available within the database.
+        """
+        return self.format_query("""
+            SELECT DISTINCT manuscript FROM manuscript_view
+            """)
+    
     async def check_manuscript_exists(self, manuscript_name: str):
         """Check if a manuscript exists within a database.
         """
@@ -102,4 +109,12 @@ class ManuscriptClient(SQLClient):
         query = self.attribute_query(manuscript_name=manuscript_name, attribute=attribute)
         records = await self.database.fetch_all(query=query)
         results = [dict(record)[attribute] for record in records]
+        return results
+    
+    async def get_distinct_manuscripts(self):
+        """Get all distinct manuscripts.
+        """
+        query = self.distinct_manuscript_query()
+        records = await self.database.fetch_all(query=query)
+        results = [dict(record)["manuscript"] for record in records]
         return results

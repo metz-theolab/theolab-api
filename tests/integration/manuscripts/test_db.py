@@ -106,6 +106,26 @@ class TestRetrieveManuscript(unittest.IsolatedAsyncioTestCase):
         manuscript = self.client.unpack_manuscript_data(records)
         self.assertEqual(manuscript, "a b c ")
 
+    def test_build_distinct_manuscript_query(self):
+        """Test that the distinct manuscript query is properly built.
+        """
+        expected_query = """SELECT DISTINCT manuscript FROM manuscript_view"""
+        self.assertEqual(
+            expected_query,
+            self.client.distinct_manuscript_query()
+        )
+
+    async def test_retrieve_distinct_manuscripts(self):
+        """Tests that the distinct manuscripts are properly retrieved from the database.
+        """
+        distinct_manuscripts = ["4Q157"]
+        retrieved_manuscripts = await self.client.get_distinct_manuscripts()
+        self.assertListEqual(
+            distinct_manuscripts,
+            retrieved_manuscripts
+        )
+
+
 
 if __name__ == "__main__":
     unittest.main()

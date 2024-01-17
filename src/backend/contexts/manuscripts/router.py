@@ -18,6 +18,16 @@ router = APIRouter(
 )
 
 
+@router.get("/")
+async def get_manuscripts(database=Depends(sql_database)):
+    """List all manuscripts available.
+    """
+    manuscripts = await database.get_distinct_manuscripts()
+    return Response(content=json.dumps({"manuscripts": manuscripts}, ensure_ascii=False).encode('utf8'),
+                    media_type="application/json")
+
+
+
 @router.get("/{manuscript_name}")
 async def get_manuscript(manuscript_name: str,
                          column: t.Optional[str] = None,
