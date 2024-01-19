@@ -6,9 +6,9 @@ services:
     volumes:
       # In test mode, only deploy the test database for confidentiality issues
       - ./dump/test_dump.sql:/docker-entrypoint-initdb.d/QD.sql
-      # - ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
+      #- ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
     environment:
-      MARIADB_ROOT_PASSWORD: root # change in production
+      MARIADB_ROOT_PASSWORD: ${MARIADB_PWD:-root} # change in production
       MYSQL_DATABASE: QD
     ports:
       - 3306:3306
@@ -17,3 +17,43 @@ services:
     image: "phpmyadmin"
     ports:
       - 8080:80
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    ports:
+      - 8024:8080
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8024
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+      KC_DB: postgres
+      KC_DB_URL: ${KEYCLOAK_DATABASE_HOST:-jdbc:postgresql://keycloakdb:5432/keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DATABASE_USER:-root}
+      KC_DB_PASSWORD: ${KEYCLOAK_DATABASE_PASSWORD:-root}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_DATABASE_PASSWORD:-root}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_LOG_LEVEL: "info"
+    networks:
+      internal:
+    depends_on:
+      - keycloakdb
+    command: start-dev # switch to start in production
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+
+  keycloakdb:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${KEYCLOAK_DATABASE_USER:-root}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DATABASE_PASSWORD:-root}
+      POSTGRES_DB: ${KEYCLOAK_DATABASE_NAME:-keycloak}
+    networks:
+      internal:
+
+
+networks:
+  internal:

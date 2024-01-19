@@ -6,12 +6,20 @@ import typing as t
 from fastapi import FastAPI, Request
 from pydantic_settings import BaseSettings
 
-
 from ..contexts import ROUTERS, APISQLClient
 
 
+class OIDCSettings(BaseSettings):
+    enabled: bool = True
+    issuer_url: str = "http://localhost:8024"
+    realm: str = "theolab"
+    client_id: str = "qwb-api"
+    retry: bool = True
+    max_attempts: int = 5
+
 
 class AppSettings(BaseSettings):
+    oidc: OIDCSettings = OIDCSettings()
     database_uri: str = "mysql://root:root@localhost:3306"
     database_name: str = "QD"
 
@@ -28,6 +36,7 @@ def create_app(settings: t.Optional[AppSettings] = None) -> FastAPI:
         settings.database_uri, settings.database_name
     )
 
+
     # Define application lifespan
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -37,8 +46,15 @@ def create_app(settings: t.Optional[AppSettings] = None) -> FastAPI:
     # Create fastapi instance
     app = FastAPI(lifespan=lifespan)
 
+    # Attach settings to application
+    app.state.settings = settings
+
     # Attach db to app state
     app.state.database = db
+
+    # Set up the keycloak OIDC client
+    from .oidc.provider import oidc_provider
+    oidc_provider(app)
 
     # Include routers
     for router in ROUTERS:

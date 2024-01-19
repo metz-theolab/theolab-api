@@ -11,7 +11,7 @@ description = "Backend for manipulation of data stored within the QWB database."
 readme = "README.md"
 requires-python = ">=3.9,<4.0"
 dynamic = ["version"]
-dependencies = ["fastapi", "databases[aiomysql]", "uvicorn","pydantic-settings", "httpx"]
+dependencies = ["fastapi", "databases[aiomysql]", "uvicorn","pydantic-settings", "httpx", "pyjwt","loguru","cryptography"]
 
 [project.scripts]
 "qwb-api" = "backend.main:main"

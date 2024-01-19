@@ -5,6 +5,8 @@ import json
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse
 from .models import ManuscriptAttributes
+from backend.api.oidc.provider import check_user
+from backend.settings.settings import QWB_READ_ROLE, QWB_CLIENT_ID
 
 
 def sql_database(request: Request):
@@ -19,7 +21,9 @@ router = APIRouter(
 
 
 @router.get("/")
-async def get_manuscripts(database=Depends(sql_database)):
+async def get_manuscripts(database=Depends(sql_database),
+                          user=check_user(expected_roles=[QWB_READ_ROLE],
+                                          client_id=QWB_CLIENT_ID)):
     """List all manuscripts available.
     """
     manuscripts = await database.get_distinct_manuscripts()
@@ -27,12 +31,13 @@ async def get_manuscripts(database=Depends(sql_database)):
                     media_type="application/json")
 
 
-
 @router.get("/{manuscript_name}")
 async def get_manuscript(manuscript_name: str,
                          column: t.Optional[str] = None,
                          line: t.Optional[str] = None,
-                         database=Depends(sql_database)):
+                         database=Depends(sql_database),
+                         user=check_user(expected_roles=[QWB_READ_ROLE],
+                                         client_id=QWB_CLIENT_ID)):
     """Retrieve the content of a given manuscript.
     """
     if not await database.check_manuscript_exists(manuscript_name=manuscript_name):
@@ -64,7 +69,9 @@ async def get_manuscript(manuscript_name: str,
 async def get_manuscript_display(manuscript_name: str,
                                  column: t.Optional[str] = None,
                                  line: t.Optional[str] = None,
-                                 database=Depends(sql_database)):
+                                 database=Depends(sql_database),
+                                 user=check_user(expected_roles=[QWB_READ_ROLE],
+                                                 client_id=QWB_CLIENT_ID)):
     """Retrieve the content of a given manuscript in HTML format.
     """
     if not await database.check_manuscript_exists(manuscript_name=manuscript_name):
@@ -89,12 +96,14 @@ async def get_manuscript_display(manuscript_name: str,
             error_message = "Manuscript {} column {} line {} not found.".format(
                 manuscript_name, column, line)
         return Response(status_code=404, content=error_message)
-    
+
 
 @router.get("/{manuscript_name}/attributes/{attribute}")
 async def get_manuscript_attributes(manuscript_name: str,
                                     attribute: ManuscriptAttributes,
-                                    database=Depends(sql_database)):
+                                    database=Depends(sql_database),
+                                    user=check_user(expected_roles=[QWB_READ_ROLE],
+                                                    client_id=QWB_CLIENT_ID)):
     """List all columns available for a manuscript.
     """
     if not await database.check_manuscript_exists(manuscript_name=manuscript_name):
@@ -106,4 +115,3 @@ async def get_manuscript_attributes(manuscript_name: str,
     }
     return Response(content=json.dumps(response, ensure_ascii=False).encode('utf8'),
                     media_type="application/json")
-
