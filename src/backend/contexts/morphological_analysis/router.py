@@ -3,6 +3,8 @@
 import typing as t
 import json
 from fastapi import APIRouter, Request, Depends, Response
+from backend.api.oidc.provider import check_user
+from backend.settings.settings import QWB_READ_ROLE, QWB_CLIENT_ID
 
 
 def sql_database(request: Request):
@@ -21,7 +23,9 @@ async def get_word_analysis(word: str,
                             manuscript: t.Optional[str] = None,
                             column: t.Optional[str] = None,
                             line: t.Optional[str] = None,
-                            database=Depends(sql_database)):
+                            database=Depends(sql_database),
+                            user=check_user(expected_roles=[QWB_READ_ROLE],
+                                            client_id=QWB_CLIENT_ID)):
     """Given a word, list all lexicometric analysis available for this word.
     Optionally, can be filtered by manuscript, column and line.
     If manuscript is not filled out, column and line are ignored.

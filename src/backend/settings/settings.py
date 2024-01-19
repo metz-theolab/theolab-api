@@ -7,3 +7,7 @@ from pydantic_settings import BaseSettings
 class APISettings(BaseSettings):
     port: int = 8000
     host: str = "127.0.0.1"
+
+
+QWB_CLIENT_ID = "qwb-api"
+QWB_READ_ROLE = "read"
