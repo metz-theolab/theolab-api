@@ -41,7 +41,7 @@ services:
       internal:
     depends_on:
       - keycloakdb
-    command: start-dev # switch to start in production
+    command: start-dev --import-realm # switch to start in production
     volumes:
       - ./keycloak:/opt/keycloak/data/import
 
