@@ -25,7 +25,6 @@ class TestRetrieveManuscript(unittest.IsolatedAsyncioTestCase):
         """Test that the manuscript query is properly built with column option.
         """
         query = self.client.manuscript_query("4Q157", column="a")
-        print(query)
         self.assertEqual(
             query,
             """SELECT manuscript_view.manuscript, manuscript_view.reading, manuscript_view.followed_by, manuscript_view.sequence_in_line, manuscript_view.line FROM manuscript_view WHERE manuscript_view.manuscript = '4Q157' AND manuscript_view.column = 'a' AND manuscript_view.language_id = 1"""

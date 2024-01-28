@@ -31,6 +31,9 @@ dev = [
 [tool.setuptools.dynamic]
 version = { attr = "backend.__about__.__version__" }
 
+[tool.setuptools]
+packages = ["src","tests"]
+
 [tool.pyright]
 pythonVersion = "3.10"
 include = ["backend","tests"]

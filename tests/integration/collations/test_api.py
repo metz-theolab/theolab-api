@@ -1,0 +1,2 @@
+"""Test collation related endpoints.
+"""
