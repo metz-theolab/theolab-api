@@ -11,7 +11,7 @@ description = "Backend for manipulation of data stored within the QWB database."
 readme = "README.md"
 requires-python = ">=3.9,<4.0"
 dynamic = ["version"]
-dependencies = ["fastapi", "databases[aiomysql]", "uvicorn","pydantic-settings", "httpx", "pyjwt","loguru","cryptography==41.0.7"]
+dependencies = ["fastapi", "databases[aiomysql]", "uvicorn","pydantic-settings", "httpx", "pyjwt","loguru","cryptography==41.0.7", "collatex", "Levenshtein", "textdistance"]
 
 [project.scripts]
 "qwb-api" = "backend.main:main"
@@ -31,12 +31,9 @@ dev = [
 [tool.setuptools.dynamic]
 version = { attr = "backend.__about__.__version__" }
 
-[tool.setuptools]
-packages = ["src","tests"]
-
 [tool.pyright]
 pythonVersion = "3.10"
-include = ["backend","tests"]
+include = ["backend"]
 exclude = ["**/.venv", "**/node_modules", "**/__pycache__", ".git", "**/build"]
 venv = "venv"
 venvPath = "."

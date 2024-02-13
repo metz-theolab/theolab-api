@@ -6,3 +6,5 @@ FOLLOWED_BY_MAPPER = {
     "break": "\n",
     "none": "",
 }
+
+FRAGMENTATION_PLACEHOLDER = "φ"

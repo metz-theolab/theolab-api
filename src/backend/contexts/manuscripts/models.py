@@ -8,7 +8,11 @@ FOLLOWED_BY_MAPPER = {
     "none": "",
 }
 
+
+
 class ManuscriptAttributes(str, Enum):
     """Attributes of a manuscript.
     """
     column = "column"
+
+
