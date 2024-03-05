@@ -3,10 +3,10 @@
 import contextlib
 import typing as t
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 
-from ..contexts import ROUTERS, APISQLClient
+from ..contexts import ROUTERS, APISQLClient, scribes_router
 
 
 class OIDCSettings(BaseSettings):
@@ -24,12 +24,17 @@ class AppSettings(BaseSettings):
     database_name: str = "QD"
 
 
-def create_app(settings: t.Optional[AppSettings] = None) -> FastAPI:
+def create_app(settings: t.Optional[AppSettings] = None,
+               scribes: bool = False) -> FastAPI:
     """This is the application factory, e.g., a function responsible for
     creating a fresh new instance of application.
     """
     # Parse application settings
     settings = settings or AppSettings()
+
+    # If SCRIBES only mode is set, set scribes to True
+    if scribes:
+        settings.database_name = "scribes"
 
     # Create database client according to application settings
     db = APISQLClient(
@@ -56,9 +61,14 @@ def create_app(settings: t.Optional[AppSettings] = None) -> FastAPI:
     from .oidc.provider import oidc_provider
     oidc_provider(app)
 
-    # Include routers
-    for router in ROUTERS:
-        app.include_router(router)
+    if scribes:
+        # If scribes only mode is activated, only make
+        # available scribes related endpoints
+        app.include_router(scribes_router)
+    else:
+        # Include routers
+        for router in ROUTERS:
+            app.include_router(router)
 
     # Return new application instance
     return app

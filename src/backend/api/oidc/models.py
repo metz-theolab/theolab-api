@@ -21,7 +21,7 @@ class UserClaims(BaseModel, extra="allow"):
     """UserClaims decoded from a token.
     Inherits from pydantic BaseModel.
     """
-    given_name: Optional[str] = None
+    preferred_username: Optional[str] = None
     resource_access: Dict[str, Dict[str, List[str]]]
 
     def has_roles(self,

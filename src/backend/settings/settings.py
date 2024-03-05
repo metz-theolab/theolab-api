@@ -11,3 +11,7 @@ class APISettings(BaseSettings):
 
 QWB_CLIENT_ID = "qwb-api"
 QWB_READ_ROLE = "read"
+
+#TODO: create scribes specific client id
+SCRIBES_CLIENT_ID = "qwb-api"
+SCRIBES_READ_ROLE = "read"

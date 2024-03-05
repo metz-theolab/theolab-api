@@ -20,3 +20,4 @@ test_client = TestClient(app)
 # Environment
 DB_URI = "mysql://root:root@localhost:3306"
 DB_NAME = "QD"
+SCRIBES_DB = "scribes"

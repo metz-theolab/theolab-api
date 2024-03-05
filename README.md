@@ -31,5 +31,12 @@ qwb-api
 
 and access the documentation on your browser at `localhost:8000/docs`.
 
-## Contributing to the API
+## Running the API in SCRIBES only mode
+
+If you only want to access SCRIBES related endpoints, :
+```
+qwb-api --scribes-only
+```
+
+
 

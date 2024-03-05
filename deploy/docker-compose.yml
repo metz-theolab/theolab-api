@@ -5,7 +5,8 @@ services:
     image: "mariadb"
     volumes:
       # In test mode, only deploy the test database for confidentiality issues
-      - ./dump/test_dump.sql:/docker-entrypoint-initdb.d/QD.sql
+      #- ./dump/test_dump.sql:/docker-entrypoint-initdb.d/QD.sql
+      - ./dump/test_dump.sql:/docker-entrypoint-initdb.d/SCRIBES.sql
       #- ./dump/QD.sql:/docker-entrypoint-initdb.d/QD.sql
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_PWD:-root} # change in production

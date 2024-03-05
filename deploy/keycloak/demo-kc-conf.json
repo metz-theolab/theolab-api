@@ -71,6 +71,34 @@
         "impersonate": true,
         "manage": true
       }
+    },
+    {
+      "id": "aaa29ae4-db64-4735-9133-c13b768c3ff6",
+      "clientRoles": {
+        "qwb-api": [
+            "read"
+        ]
+      },
+      "createdTimestamp": 1706203863614,
+      "username": "other",
+      "credentials": [{
+        "type": "password",
+        "value": "default",
+        "temporary": false
+      }],
+      "enabled": true,
+      "totp": false,
+      "emailVerified": false,
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "notBefore": 0,
+      "access": {
+        "manageGroupMembership": true,
+        "view": true,
+        "mapRoles": true,
+        "impersonate": true,
+        "manage": true
+      }
     }
   ],
   "roles": {

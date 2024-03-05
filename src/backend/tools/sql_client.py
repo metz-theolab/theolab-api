@@ -20,6 +20,11 @@ class SQLClient:
         self._database = Database(self.uri)
         await self._database.connect()
 
+    async def disconnect(self):
+        """Disconnect the database."""
+        if self._database:
+            await self._database.disconnect()
+
     @property
     def database(self) -> Database:
         """Return the database."""
