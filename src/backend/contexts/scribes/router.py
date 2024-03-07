@@ -3,11 +3,11 @@
 from typing import List, Literal, Optional
 import json
 from fastapi import APIRouter, Query, Response, Request, Depends, HTTPException
+from collatex import collate, Collation
+
 from .db import ALL_TRADITIONS, MANUSCRIPTS_PER_TRADITION, FOLIOS_PER_MANUSCRIPT, FOLIO_CONTENT, TRADITION_CONTENT
 from backend.api.oidc.provider import check_user
 from backend.settings.settings import SCRIBES_READ_ROLE, SCRIBES_CLIENT_ID
-
-from collatex import collate, Collation
 
 
 # TODO: factorize the database access
@@ -76,7 +76,7 @@ async def get_manuscripts_folios(tradition: str,
                                                ensure_ascii=False).encode('utf8'),
                             media_type="application/json")
         return HTTPException(status_code=404, detail=f"No available folios within the database for manuscript {manuscript}"
-                             "of tradition {tradition}.")
+                             f"of tradition {tradition}.")
     except ValueError as e:
         return HTTPException(status_code=404, detail=f"Unknown requested manuscript {manuscript} for tradition {tradition}")
 
@@ -228,36 +228,64 @@ async def add_folio(tradition: str,
                     content=f"Folio {folio} added for manuscript {manuscript} of tradition {tradition}.")
 
 
-@router.post("/{tradition}/{manuscript}/{folio}/{line}", tags=["ADD"])
-async def add_line(tradition: str,
+@router.post("/{tradition}/{manuscript}/{folio}/{column}", tags=["ADD"])
+async def add_column(tradition: str,
                    manuscript: str,
                    folio: str,
-                   line: int,
+                   column: int,
                    database=Depends(sql_database),
                    user=check_user(expected_roles=[SCRIBES_READ_ROLE],
                                    client_id=SCRIBES_CLIENT_ID)):
-    """Add a line for the selected folio.
+    """Add a column for the selected folio.
+    """
+    try:
+        await database.add_column(
+            tradition=tradition,
+            manuscript=manuscript,
+            folio=folio,
+            position_in_folio=column,
+            user=user.preferred_username
+        )
+    except ValueError as e:
+        return HTTPException(status_code=500,
+                             detail=f"Unable to add column {column} for folio {folio} of manuscript {manuscript} of tradition {tradition}")
+    return Response(status_code=201,
+                    content=f"Column {column} added for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+
+
+@router.post("/{tradition}/{manuscript}/{folio}/{column}/{line}", tags=["ADD"])
+async def add_line(tradition: str,
+                    manuscript: str,
+                    folio: str,
+                    column: int,
+                    line: int,
+                    position_in_column: int,
+                    database=Depends(sql_database),
+                    user=check_user(expected_roles=[SCRIBES_READ_ROLE],
+                                    client_id=SCRIBES_CLIENT_ID)):
+    """Add a new line to a column.
     """
     try:
         await database.add_line(
             tradition=tradition,
             manuscript=manuscript,
             folio=folio,
-            line_number=line,
-            position_in_folio=line,
+            column_position_in_folio=column,
+            position_in_column=position_in_column,
             user=user.preferred_username
         )
     except ValueError as e:
         return HTTPException(status_code=500,
-                             detail=f"Unable to add line {line} for folio {folio} of manuscript {manuscript} of tradition {tradition}")
+                             detail=f"Unable to add line {line} for column {column} for folio {folio} of manuscript {manuscript} of tradition {tradition}")
     return Response(status_code=201,
-                    content=f"Line {line} added for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+                    content=f"Line {line} added for column {column} of folio {folio} of manuscript {manuscript} of tradition {tradition}.")
 
 
-@router.post("/{tradition}/{manuscript}/{folio}/{line}/", tags=["ADD"])
+@router.post("/{tradition}/{manuscript}/{folio}/{column}/{line}/", tags=["ADD"])
 async def add_readings(tradition: str,
                        manuscript: str,
                        folio: str,
+                       column: int,
                        line: int,
                        content: str,
                        database=Depends(sql_database),
@@ -271,7 +299,8 @@ async def add_readings(tradition: str,
             tradition=tradition,
             manuscript=manuscript,
             folio=folio,
-            line=line,
+            column_position_in_folio=column,
+            position_in_column=line,
             user=user.preferred_username
         )
         # Add new empty line
@@ -279,8 +308,8 @@ async def add_readings(tradition: str,
             tradition=tradition,
             manuscript=manuscript,
             folio=folio,
-            line_number=line,
-            position_in_folio=line,
+            column_position_in_folio=column,
+            position_in_column=column,
             user=user.preferred_username
         )
     except ValueError as e:
@@ -291,6 +320,7 @@ async def add_readings(tradition: str,
             manuscript=manuscript,
             folio=folio,
             line=line,
+            column=column,
             content=content,
             user=user.preferred_username
         )
@@ -301,12 +331,13 @@ async def add_readings(tradition: str,
                     content=f"Added content for line {line} added for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
 
 
-@router.post("/{tradition}/{manuscript}/{folio}/{line}/{reading}/note", tags=["ADD"])
+@router.post("/{tradition}/{manuscript}/{folio}/{column}/{line}/{reading}/note", tags=["ADD"])
 async def add_note(reading: str,
                    tradition: str,
                    manuscript: str,
                    folio: str,
                    line: int,
+                   column: int,
                    position_in_line: int,
                    note: str,
                    category: str = Query(
@@ -324,6 +355,7 @@ async def add_note(reading: str,
             manuscript=manuscript,
             line=line,
             folio=folio,
+            column=column,
             category=category,
             position_in_line=position_in_line,
             user=user.preferred_username
@@ -337,10 +369,11 @@ async def add_note(reading: str,
                     f" added for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
 
 
-@router.post("/{tradition}/{manuscript}/{folio}/{line}/note", tags=["ADD"])
+@router.post("/{tradition}/{manuscript}/{folio}/{column}/{line}/note", tags=["ADD"])
 async def add_line_notes(tradition: str,
                          manuscript: str,
                          folio: str,
+                         column: int,
                          line: int,
                          note: str,
                          database=Depends(sql_database),
@@ -353,6 +386,7 @@ async def add_line_notes(tradition: str,
             tradition=tradition,
             manuscript=manuscript,
             folio=folio,
+            column=column,
             line=line,
             note=note,
             user=user.preferred_username
@@ -421,11 +455,37 @@ async def delete_folio(tradition: str,
                     content=f"Folio {folio} deleted for manuscript {manuscript} of tradition {tradition}.")
 
 
-@router.delete("/{tradition}/{manuscript}/{folio}/{line}", tags=["DELETE"])
+
+@router.delete("/{tradition}/{manuscript}/{folio}/{column}", tags=["DELETE"])
+async def delete_column(tradition: str,
+                      manuscript: str,
+                      folio: str,
+                      column: int,
+                      database=Depends(sql_database),
+                      user=check_user(expected_roles=[SCRIBES_READ_ROLE],
+                                      client_id=SCRIBES_CLIENT_ID)):
+    """Delete a column for the selected folio.
+    """
+    try:
+        await database.remove_column(tradition=tradition,
+                                   manuscript=manuscript,
+                                   folio=folio,
+                                   column=column,
+                                   user=user.preferred_username)
+    except ValueError as e:
+        return HTTPException(status_code=500,
+                             detail=f"Unable to delete column {column} for folio {folio} of manuscript {manuscript} of tradition {tradition}")
+    return Response(status_code=200,
+                    content=f"Column {column} deleted for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+
+
+
+@router.delete("/{tradition}/{manuscript}/{folio}/{column}/{line}", tags=["DELETE"])
 async def delete_line(tradition: str,
                       manuscript: str,
                       folio: str,
                       line: int,
+                      column: int,
                       database=Depends(sql_database),
                       user=check_user(expected_roles=[SCRIBES_READ_ROLE],
                                       client_id=SCRIBES_CLIENT_ID)):
@@ -435,6 +495,7 @@ async def delete_line(tradition: str,
         await database.remove_line(tradition=tradition,
                                    manuscript=manuscript,
                                    folio=folio,
+                                   column=column,
                                    line=line,
                                    user=user.preferred_username)
     except ValueError as e:

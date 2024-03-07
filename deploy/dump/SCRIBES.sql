@@ -63,17 +63,29 @@ CREATE TABLE folios
 );
 
 
-CREATE TABLE folio_lines
+CREATE TABLE columns
 (
     id INT NOT NULL AUTO_INCREMENT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(255) NOT NULL,
-    line_number INT NOT NULL,
     folio_id INT NOT NULL,
     position_in_folio INT NOT NULL,
     PRIMARY KEY (id),
     FOREIGN KEY (folio_id) REFERENCES folios(id) ON DELETE CASCADE,
-    UNIQUE (folio_id, line_number)
+    UNIQUE (folio_id, position_in_folio)
+);
+
+
+CREATE TABLE column_lines
+(
+    id INT NOT NULL AUTO_INCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(255) NOT NULL,
+    position_in_column INT NOT NULL,
+    column_id INT NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (column_id) REFERENCES columns(id) ON DELETE CASCADE,
+    UNIQUE (column_id, position_in_column)
 );
 
 
@@ -116,7 +128,7 @@ CREATE TABLE readings
     position_in_line INT NOT NULL,
     position_in_verse INT,
     PRIMARY KEY (id),
-    FOREIGN KEY (line_id) REFERENCES folio_lines(id) ON DELETE CASCADE,
+    FOREIGN KEY (line_id) REFERENCES column_lines(id) ON DELETE CASCADE,
     FOREIGN KEY (verse_id) REFERENCES verses(id),
     UNIQUE (line_id, position_in_line)
 );
@@ -167,7 +179,7 @@ CREATE TABLE line_notes
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(255) NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY (line_id) REFERENCES folio_lines(id) ON DELETE CASCADE
+    FOREIGN KEY (line_id) REFERENCES column_lines(id) ON DELETE CASCADE
 );
 
 
@@ -188,6 +200,8 @@ CREATE TABLE morphological_analysis
     PRIMARY KEY (id),
     FOREIGN KEY (reading_id) REFERENCES readings(id)
 );
+
+
 
 
 CREATE TRIGGER `permissions_traditions_BEFORE_INSERT` AFTER INSERT ON `traditions` FOR EACH ROW

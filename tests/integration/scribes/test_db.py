@@ -172,6 +172,38 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                         position_in_manuscript=1,
                                         user="test_user")
 
+    async def test_insert_column_success(self):
+        """Test the insertion of a column within the database as a success.
+        """
+        await self.client.add_tradition(tradition=f"Isaiah{self.nbr}",
+                                        note="Demo tradition",
+                                        is_public=True,
+                                        user="test_user")
+        await self.client.add_manuscript(manuscript=f"A{self.nbr}",
+                                         tradition=f"Isaiah{self.nbr}",
+                                         note="Demo manuscript",
+                                         user="test_user")
+        await self.client.add_folio(manuscript=f"A{self.nbr}",
+                                    tradition=f"Isaiah{self.nbr}",
+                                    folio=f"{self.nbr}",
+                                    position_in_manuscript=1,
+                                    user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
+        # Check that no error is raised when inserting the column
+        column = await self.client.fetch_column_id(column_position=1,
+                                                   tradition=f"Isaiah{self.nbr}",
+                                                   manuscript=f"A{self.nbr}",
+                                                   folio=f"{self.nbr}",
+                                                   user="test_user")
+        try:
+            self.assertIsNotNone(column)
+        except Exception as e:
+            self.fail(f"Column not inserted: {e}")
+
     async def test_insert_line(self):
         """Test the insertion of a line within the database.
         """
@@ -188,17 +220,24 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
+
         # Check that no error is raised when inserting the line
         line = await self.client.fetch_line_id(
             manuscript=f"A{self.nbr}",
             tradition=f"Isaiah{self.nbr}",
             folio=f"{self.nbr}",
+            column=1,
             line=1)
         try:
             self.assertIsNotNone(line)
@@ -221,18 +260,23 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         with self.assertRaises(ValueError):
             await self.client.add_line(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
                                        folio=f"{self.nbr}",
-                                       line_number=1,
-                                       position_in_folio=1,
+                                       column_position_in_folio=1,
+                                       position_in_column=1,
                                        user="test_user")
 
     async def test_insert_line_missing_folio(self):
@@ -249,9 +293,9 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
         with self.assertRaises(ValueError):
             await self.client.add_line(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
-                                       folio="unknown",
-                                       line_number=1,
-                                       position_in_folio=1,
+                                       folio=f"unknown",
+                                       column_position_in_folio=1,
+                                       position_in_column=1,
                                        user="test_user")
 
     async def test_insert_chapter(self):
@@ -368,16 +412,22 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_readings(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
                                        folio=f"{self.nbr}",
                                        line=1,
+                                       column=1,
                                        content="εν αρκη ετελεσεν ο θεος τον ουρανον και την γην",
                                        user="test_user")
         # TODO: check proper insertion of the readings when verse are mentioned
@@ -502,22 +552,30 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.remove_line(manuscript=f"A{self.nbr}",
                                       tradition=f"Isaiah{self.nbr}",
                                       folio=f"{self.nbr}",
+                                      column_position_in_folio=1,
                                       line=1,
                                       user="test_user")
+
         with self.assertRaises(ValueError):
             await self.client.fetch_line_id(manuscript=f"A{self.nbr}",
                                             tradition=f"Isaiah{self.nbr}",
                                             folio=f"{self.nbr}",
-                                            line=1)
+                                            line=1,
+                                            column=1)
 
     async def test_remove_chapter(self):
         """Tests that removing chapters behaves as expected.
@@ -638,16 +696,22 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_readings(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
                                        folio=f"{self.nbr}",
                                        line=1,
+                                       column=1,
                                        content="".join(
                                            ["<w>{}</w>".format(word) for word in "εν αρκη ετελεσεν ο θεος τον ουρανον και την γην".split()]),
                                        user="test_user")
@@ -655,6 +719,7 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                             tradition=f"Isaiah{self.nbr}",
                                             folio=f"{self.nbr}",
                                             line=1,
+                                            column=1,
                                             reading="εν",
                                             position_in_line=2,
                                             category="translation",
@@ -678,16 +743,22 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_readings(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
                                        folio=f"{self.nbr}",
                                        line=1,
+                                       column=1,
                                        content="".join(
                                            ["<w>{}</w>".format(word) for word in "εν αρκη ετελεσεν ο θεος τον ουρανον και την γην".split()]),
                                        user="test_user")
@@ -695,6 +766,7 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                             tradition=f"Isaiah{self.nbr}",
                                             folio=f"{self.nbr}",
                                             line=1,
+                                            column=1,
                                             reading="εν",
                                             category="translation",
                                             position_in_line=2,
@@ -704,6 +776,7 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                                tradition=f"Isaiah{self.nbr}",
                                                folio=f"{self.nbr}",
                                                line=1,
+                                               column=1,
                                                reading="εν",
                                                category="translation",
                                                position_in_line=2,
@@ -726,16 +799,22 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_line_notes(manuscript=f"A{self.nbr}",
                                          tradition=f"Isaiah{self.nbr}",
                                          folio=f"{self.nbr}",
                                          line=1,
+                                         column=1,
                                          note="This is a note regarding a line",
                                          user="test_user")
 
@@ -756,22 +835,29 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_line_notes(manuscript=f"A{self.nbr}",
                                          tradition=f"Isaiah{self.nbr}",
                                          folio=f"{self.nbr}",
                                          line=1,
+                                         column=1,
                                          note="This is a note regarding a line",
                                          user="test_user")
         await self.client.remove_line_notes(manuscript=f"A{self.nbr}",
                                             tradition=f"Isaiah{self.nbr}",
                                             folio=f"{self.nbr}",
                                             line=1,
+                                            column=1,
                                             user="test_user")
 
 
@@ -887,16 +973,22 @@ class TestDBFetch(TestSCRIBESClient):
                                     folio=f"{self.nbr}",
                                     position_in_manuscript=1,
                                     user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
         await self.client.add_line(manuscript=f"A{self.nbr}",
                                    tradition=f"Isaiah{self.nbr}",
                                    folio=f"{self.nbr}",
-                                   line_number=1,
-                                   position_in_folio=1,
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
                                    user="test_user")
         await self.client.add_readings(manuscript=f"A{self.nbr}",
                                        tradition=f"Isaiah{self.nbr}",
                                        folio=f"{self.nbr}",
                                        line=1,
+                                       column=1,
                                        content="εν αρκη ετελεσεν ο θεος τον ουρανον και την γην",
                                        user="test_user")
         readings = await self.client.get_folio_readings(manuscript=f"A{self.nbr}",
@@ -905,6 +997,11 @@ class TestDBFetch(TestSCRIBESClient):
                                                         user="test_user")
         self.assertEqual(readings, [
                          {'line': 1, 'content': 'εν αρκη ετελεσεν ο θεος τον ουρανον και την γην'}])
+
+    async def test_add_chapter_verse(self):
+        """Tests that adding a chapter and a verse to the.
+        """
+        # TODO
 
 
 class TestDBUpdate(TestSCRIBESClient):

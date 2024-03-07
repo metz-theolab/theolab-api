@@ -233,13 +233,15 @@ class SCRIBESBaseClient(SQLClient):
             tradition: str,
             manuscript: str,
             folio: str,
+            column: int,
             line: int,
             user: Optional[str] = None):
         """Given a line number within a manuscript, a tradition and a folio fetch its ID."""
         try:
-            folio_id = await self.fetch_folio_id(
+            column_id = await self.fetch_column_id(
                 tradition=tradition,
                 manuscript=manuscript,
+                column_position=column,
                 folio=folio,
                 user=user
             )
@@ -248,13 +250,14 @@ class SCRIBESBaseClient(SQLClient):
                 f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}.") from e
         query = self.format_query(f"""
             SELECT id
-            FROM folio_lines
-            WHERE folio_id = {folio_id} AND line_number = {line}
+            FROM column_lines
+            WHERE column_id = {column_id} AND position_in_column = {line}
         """)
         record = await self.database.fetch_one(query=query)
         if not record:
             raise ValueError(
-                f"Line {line} not found for folio {folio} in manuscript {manuscript} in tradition {tradition}.")
+                f"Line {line} not found for column {column_id} of folio {folio} in manuscript {manuscript}"
+                f" in tradition {tradition}.")
         return record[0]
 
     async def fetch_verse_id(
@@ -283,6 +286,37 @@ class SCRIBESBaseClient(SQLClient):
         if not record:
             raise ValueError(
                 f"Verse {verse} not found for chapter {chapter} in tradition {tradition}.")
+        return record[0]
+
+    async def fetch_column_id(
+            self,
+            column_position: int,
+            tradition: str,
+            manuscript: str,
+            folio: str,
+            user: Optional[str] = None):
+        """Fetch the column ID from the database.
+        """
+        try:
+            folio_id = await self.fetch_folio_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                user=user)
+        except ValueError as e:
+            raise ValueError(
+                f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}") from e
+
+        query = self.format_query(f"""
+            SELECT id
+            FROM columns
+            WHERE folio_id = {folio_id}
+        """)
+        record = await self.database.fetch_one(query=query)
+        if not record:
+            raise ValueError(
+                f"Column not find column in position {column_position} for folio "
+                f"in manuscript {manuscript} in tradition {tradition}.")
         return record[0]
 
 
@@ -553,67 +587,133 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Verse {verse} not found for chapter {chapter} in tradition {tradition}.")
 
+    async def add_column(self,
+                         tradition: str,
+                         manuscript: str,
+                         position_in_folio: int,
+                         folio: str,
+                         user: str):
+        """Add a new column to the database.
+        """
+        try:
+            folio_id = await self.fetch_folio_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                user=user
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}.") from e
+        query = self.format_query(f"""
+        INSERT INTO columns (created_by, folio_id, position_in_folio)
+        VALUES('{user}', {folio_id}, {position_in_folio})
+        """)
+        try:
+            await self.database.execute(query=query)
+            logger.info(
+                f"Column {position_in_folio} added to the database for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+        except IntegrityError as e:
+            raise ValueError(
+                f"Column {position_in_folio} already exists for folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
+
+    async def add_remove_column(self,
+                                tradition: str,
+                                manuscript: str,
+                                position_in_folio: int,
+                                folio: str,
+                                user: str):
+        """Remove a column from the database.
+        """
+        try:
+            folio_id = await self.fetch_folio_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                user=user
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}.") from e
+        query = self.format_query(f"""
+        DELETE FROM columns WHERE position_in_folio = {position_in_folio} AND folio_id = {folio_id} AND created_by = '{user}'
+        """)
+        records = await self.database.execute(query=query)
+        if records > 0:
+            logger.info(
+                f"Column {position_in_folio} of folio {folio} for manuscript {manuscript} removed from the database.")
+        else:
+            logger.info(
+                f"Column {position_in_folio} of folio {folio} for manuscript {manuscript} not found in the database.")
+            raise ValueError(
+                f"Column {position_in_folio} not found for folio {folio} in manuscript {manuscript} in tradition {tradition}.")
+
     async def add_line(self,
                        tradition: str,
                        manuscript: str,
                        folio: str,
-                       line_number: int,
-                       position_in_folio: int,
+                       position_in_column: int,
+                       column_position_in_folio: int,
                        user: str):
         """
         Add a line to the database.
         """
         try:
-            folio_id = await self.fetch_folio_id(
+            column_id = await self.fetch_column_id(
                 tradition=tradition,
                 manuscript=manuscript,
+                column_position=column_position_in_folio,
                 folio=folio,
                 user=user
             )
         except ValueError as e:
-            raise ValueError(f"Folio {folio} not found within manuscript {manuscript}"
-                             f"of tradition {tradition}.") from e
+            raise ValueError(
+                f"Column {column_position_in_folio} not found for folio {folio}")
 
         query = self.format_query(f"""
-        INSERT INTO folio_lines (created_by, line_number, folio_id, position_in_folio)
-        VALUES('{user}', {line_number}, {folio_id}, {position_in_folio})
+        INSERT INTO column_lines (created_by, column_id, position_in_column)
+        VALUES('{user}', {column_id}, {position_in_column})
         """)
         try:
             await self.database.execute(query=query)
-            logger.info(f"Line {line_number} added to the database.")
+            logger.info(f"Line {position_in_column} added to the database.")
         except IntegrityError as e:
             raise ValueError(
-                f"Line {line_number} already exists for folio {folio} in manuscript {folio} in tradition {tradition}.") from e
+                f"Line {position_in_column} already exists for folio {folio} in manuscript {folio} in tradition {tradition}.") from e
 
     async def remove_line(self,
                           tradition: str,
                           manuscript: str,
                           folio: str,
-                          line: int,
+                          column_position_in_folio: int,
+                          position_in_column: int,
                           user: str):
         """
         Remove a line from the database.
         """
         try:
-            folio_id = await self.fetch_folio_id(
+            column_id = await self.fetch_column_id(
                 tradition=tradition,
                 manuscript=manuscript,
+                column_position=column_position_in_folio,
                 folio=folio,
                 user=user
             )
         except ValueError as e:
-            raise ValueError(f"Folio {folio} not found within manuscript {manuscript}"
-                             f"of tradition {tradition}.") from e
+            raise ValueError(
+                f"Column {column_position_in_folio} not found for folio {folio}")
         query = self.format_query(f"""
-        DELETE FROM folio_lines WHERE line_number = {line} AND folio_id = {folio_id} AND created_by = '{user}'
+        DELETE FROM column_lines WHERE position_in_column = {position_in_column} AND column_id = {column_id} AND created_by = '{user}'
         """)
         records = await self.database.execute(query=query)
         if records > 0:
-            logger.info(f"Line {line} removed from the database.")
+            logger.info(
+                f"Line {position_in_column} removed from the database.")
         else:
-            logger.info(f"Line {line} not found in the database.")
+            logger.info(
+                f"Line {position_in_column} not found in the database.")
             raise ValueError(
-                f"Line {line} not found for folio {folio} in manuscript {manuscript} in tradition {tradition}.")
+                f"Line {position_in_column} not found for column {column_position_in_folio} folio {folio} in manuscript {manuscript} in tradition {tradition}.")
 
     @staticmethod
     def _itemize_readings(
@@ -638,14 +738,13 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                            manuscript: str,
                            folio: str,
                            line: int,
+                           column: int,
                            user: str,
                            chapter: Optional[int] = None,
                            verse: Optional[str] = None,
                            ):
         """Write content as readings to the database.
         Content is added to the database on a line per line basis.
-
-        TODO: add input using a verse basis.
         """
         try:
             line_id = await self.fetch_line_id(
@@ -653,6 +752,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                 manuscript=manuscript,
                 folio=folio,
                 line=line,
+                column=column,
                 user=user
             )
         except ValueError as e:
@@ -688,12 +788,13 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         logger.info(
             f"Inserted {len(itemized_readings)} readings to the database.")
 
-    async def fetch_reading_id(self, 
-                               tradition: str, 
-                               manuscript: str, 
-                               folio: str, 
-                               line: int, 
-                               reading: str, 
+    async def fetch_reading_id(self,
+                               tradition: str,
+                               manuscript: str,
+                               folio: str,
+                               column: int,
+                               line: int,
+                               reading: str,
                                position_in_line: int,
                                user: Optional[str] = None):
         """Fetch the reading ID from the database.
@@ -704,6 +805,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                 manuscript=manuscript,
                 folio=folio,
                 line=line,
+                column=column,
                 user=user
             )
         except ValueError as e:
@@ -725,6 +827,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                              line: int,
                              tradition: str,
                              manuscript: str,
+                             column: int,
                              folio: str,
                              user: str):
         """Add a note to the database for a line."""
@@ -734,6 +837,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                 manuscript=manuscript,
                 folio=folio,
                 line=line,
+                column=column,
                 user=user
             )
         except ValueError as e:
@@ -746,7 +850,13 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         await self.database.execute(query=query)
         logger.info(f"Note {note} added to the database for line {line}.")
 
-    async def remove_line_notes(self, line: int, tradition: str, manuscript: str, folio: str, user: str):
+    async def remove_line_notes(self,
+                                line: int,
+                                tradition: str,
+                                manuscript: str,
+                                folio: str,
+                                column: int,
+                                user: str):
         """Remove a note from the database for a line."""
         try:
             line_id = await self.fetch_line_id(
@@ -754,6 +864,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                 manuscript=manuscript,
                 folio=folio,
                 line=line,
+                column=column,
                 user=user
             )
         except ValueError as e:
@@ -813,6 +924,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
     async def add_reading_notes(self,
                                 note: str,
                                 reading: str,
+                                column: int,
                                 line: int,
                                 position_in_line: int,
                                 tradition: str,
@@ -827,6 +939,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             reading_id = await self.fetch_reading_id(
                 tradition=tradition,
                 manuscript=manuscript,
+                column=column,
                 folio=folio,
                 line=line,
                 position_in_line=position_in_line,
@@ -850,6 +963,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                                    position_in_line: int,
                                    tradition: str,
                                    manuscript: str,
+                                   column: int,
                                    folio: str,
                                    category: str,
                                    user: str):
@@ -859,6 +973,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
                 tradition=tradition,
                 manuscript=manuscript,
                 folio=folio,
+                column=column,
                 line=line,
                 position_in_line=position_in_line,
                 reading=reading,
@@ -878,6 +993,54 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             logger.info(
                 f"Note not found in the database for reading {reading}.")
             raise ValueError(f"Note not found for reading {reading}.")
+
+    async def add_chapter_verse(
+            self,
+            reading: str,
+            position_in_line: int,
+            tradition: str,
+            manuscript: str,
+            folio: str,
+            line: int,
+            chapter: int,
+            column: int,
+            verse: str,
+            user: str
+    ):
+        """Add a verse
+        """
+        try:
+            reading_id = await self.fetch_reading_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                line=line,
+                reading=reading,
+                column=column,
+                position_in_line=position_in_line
+            )
+        except ValueError as e:
+            logger.error(
+                f"Reading {reading} not found for line {line} in folio {folio} in manuscript {manuscript} in tradition {tradition}.")
+            raise ValueError(
+                f"Reading {reading} not found for line {line} in folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
+        try:
+            verse_id = self.fetch_verse_id(
+                tradition=tradition, chapter=chapter, verse=verse
+            )
+        except ValueError:
+            # Create missing verse in DB
+            logger.info(
+                f"Could not find verse {verse} for chapter {chapter} in tradition {tradition}.")
+            await self.add_verse(tradition=tradition, chapter=chapter, verse=verse, user=user)
+        query = self.format_query(f"""
+        UPDATE readings
+        SET verse_id = {verse_id}, chapter_id = {chapter}
+        WHERE id = {reading_id}
+        """)
+        await self.database.execute(query=query)
+        logger.info(
+            f"Added verse {verse} and chapter {chapter} to reading {reading}.")
 
 
 class SCRIBESUpdate(SCRIBESBaseClient):
@@ -1031,9 +1194,14 @@ class SCRIBESFetch(SCRIBESBaseClient):
         grouped_dict = {}
         for dict_ in list_dict:
             try:
-                grouped_dict[dict_['line_number']] += "".join(dict_['reading'])
+                grouped_dict[dict_['position_in_folio']][dict_[
+                    'position_in_column']] += "".join(dict_['reading'])
             except KeyError:
-                grouped_dict[dict_['line_number']] = "".join(dict_['reading'])
+                try:
+                    grouped_dict[dict_['position_in_column']] = {
+                        dict_['position_in_column']: "".join(dict_['reading'])}
+                except KeyError:
+                    grouped_dict[dict_['position_in_folio']] = {}
         return grouped_dict
 
     async def get_folio_readings(self,
@@ -1055,11 +1223,12 @@ class SCRIBESFetch(SCRIBESBaseClient):
                 f"Folio {folio} not found for manuscript {manuscript} of tradition {tradition}.") from e
 
         query = self.format_query(f"""
-                SELECT reading, line_number
+                SELECT reading, position_in_column, position_in_folio
                 FROM readings
-                JOIN folio_lines ON readings.line_id = folio_lines.id
-                WHERE folio_id = {folio_id}
-                ORDER BY position_in_line
+                JOIN column_lines ON readings.line_id = column_lines.id
+                JOIN columns ON column_lines.column_id = columns.id
+                WHERE columns.folio_id = {folio_id}
+                ORDER BY column_lines.column_id, position_in_line
         """)
         records = await self.database.fetch_all(query=query)
         flattened_dictionary = self.contact_line_dictionary(
@@ -1068,9 +1237,12 @@ class SCRIBESFetch(SCRIBESBaseClient):
             raise ValueError(
                 f"No content found for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
         return [
-            {"line": key,
-             "content": value}
+            {"column": key,
+             "line": subkey,
+             "content": subvalue
+             }
             for key, value in flattened_dictionary.items()
+            for subkey, subvalue in value.items()
         ]
 
 
