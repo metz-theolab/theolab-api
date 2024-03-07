@@ -33,7 +33,7 @@ version = { attr = "backend.__about__.__version__" }
 
 [tool.pyright]
 pythonVersion = "3.10"
-include = ["backend","tests"]
+include = ["src", "tests"]
 exclude = ["**/.venv", "**/node_modules", "**/__pycache__", ".git", "**/build"]
 venv = "venv"
 venvPath = "."
