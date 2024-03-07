@@ -127,7 +127,7 @@ def get_manuscripts_collation(tradition: str,
                               manuscript_list: List[str] = Query(...)):
     """Return HTML collation using collatex.
 
-    /!\ Easier to visualize using directly the endpoint rather than through the FastAPI.
+    🚨 Easier to visualize using directly the endpoint rather than through the FastAPI.
     """
     # TODO : collation view
     collation = Collation()

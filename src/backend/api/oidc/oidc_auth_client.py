@@ -5,11 +5,12 @@ user claims.
 import json
 import time
 from typing import Any, Dict, List, Optional
-from cryptography.hazmat.backends.openssl.rsa import _RSAPublicKey
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 import fastapi
 import httpx
 import jwt
+import jwt.algorithms
 from loguru import logger
 from fastapi.openapi.models import OAuth2 as OAuth2Model
 from fastapi.openapi.models import (
@@ -123,7 +124,7 @@ class OIDCAuthClient:
                 f"Could not fetch OIDC server metadata with status code {resp.status_code}")
         return resp.json()
 
-    def get_public_key(self) -> _RSAPublicKey:
+    def get_public_key(self) -> RSAPublicKey:
         """Load the public key that will be used to decode the token.
 
         Returns:
@@ -142,7 +143,10 @@ class OIDCAuthClient:
                 "OpenID Connect issuer does not support any of"
                 f"the accepted algorithms: {self.algorithms}")
         # Load the public key after decoding
-        return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
+        pubkey = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
+        if isinstance(pubkey, RSAPublicKey):
+            return pubkey
+        raise ValueError("A public key was expected, but received a private key")
 
     def decode_token(self, token: str) -> Dict[str, Any]:
         """Decode a token access.
