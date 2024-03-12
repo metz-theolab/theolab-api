@@ -29,7 +29,7 @@ async def get_traditions(database=Depends(sql_database),
     """Retrieve all existing textual traditions within the application.
     """
     try:
-        traditions = await database.get_traditions(archived=0, user=user.preferred_username)
+        traditions = await database.get_traditions(archived=False, user=user.preferred_username)
         if len(traditions) > 0:
             return Response(content=json.dumps({"traditions": traditions},
                                                ensure_ascii=False).encode('utf8'),
@@ -49,7 +49,7 @@ async def get_manuscripts(tradition: str,
     """
     try:
         manuscripts = await database.get_traditions_manuscripts(tradition,
-                                                                archived=0,
+                                                                archived=False,
                                                                 user=user.preferred_username)
         if len(manuscripts) > 0:
             return Response(content=json.dumps({"manuscripts": manuscripts},

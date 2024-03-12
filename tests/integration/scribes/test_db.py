@@ -2,14 +2,14 @@
 """
 from random import randint
 import unittest
-from .. import DB_URI, SCRIBES_DB
+from .. import SCRIBES_DB_URI, SCRIBES_DB
 from backend.contexts.scribes.db import SCRIBESClient
 
 
 class TestSCRIBESClient(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
-        self.client = SCRIBESClient(DB_URI, SCRIBES_DB)
+        self.client = SCRIBESClient(SCRIBES_DB_URI, SCRIBES_DB)
         self.nbr = randint(0, 10000)
         await self.client.connect()
 
@@ -567,7 +567,7 @@ class TestDBInsertionDeletion(TestSCRIBESClient):
                                       tradition=f"Isaiah{self.nbr}",
                                       folio=f"{self.nbr}",
                                       column_position_in_folio=1,
-                                      line=1,
+                                      position_in_column=1,
                                       user="test_user")
 
         with self.assertRaises(ValueError):
@@ -875,7 +875,7 @@ class TestDBFetch(TestSCRIBESClient):
                                         note="Demo tradition",
                                         is_public=True,
                                         user="test_user")
-        traditions = await self.client.get_traditions(archived=0, user="test_user")
+        traditions = await self.client.get_traditions(archived=False, user="test_user")
         self.assertEqual(traditions, [f"Isaiah{self.nbr}"])
 
     async def test_get_tradition_missing(self):
@@ -885,7 +885,7 @@ class TestDBFetch(TestSCRIBESClient):
         # Drop all traditions
         await self.client.database.execute(query="DELETE FROM traditions")
         with self.assertRaises(ValueError):
-            await self.client.get_traditions(archived=0, user="test_user")
+            await self.client.get_traditions(archived=False, user="test_user")
 
     async def test_get_manuscripts(self):
         """
@@ -903,7 +903,7 @@ class TestDBFetch(TestSCRIBESClient):
                                          note="Demo manuscript",
                                          user="test_user")
         manuscripts = await self.client.get_traditions_manuscripts(tradition=f"Isaiah{self.nbr}",
-                                                                   archived=0,
+                                                                   archived=False,
                                                                    user="test_user")
         self.assertEqual(manuscripts, [f"A{self.nbr}"])
 
@@ -915,7 +915,7 @@ class TestDBFetch(TestSCRIBESClient):
         await self.client.database.execute(query="DELETE FROM manuscripts")
         with self.assertRaises(ValueError):
             await self.client.get_traditions_manuscripts(tradition=f"Isaiah{self.nbr}",
-                                                         archived=0,
+                                                         archived=False,
                                                          user="test_user")
 
     async def test_get_folios(self):
@@ -996,7 +996,7 @@ class TestDBFetch(TestSCRIBESClient):
                                                         folio=f"{self.nbr}",
                                                         user="test_user")
         self.assertEqual(readings, [
-                         {'line': 1, 'content': 'εν αρκη ετελεσεν ο θεος τον ουρανον και την γην'}])
+                         {'column': 1, 'line': 1, 'content': 'εν αρκη ετελεσεν ο θεος τον ουρανον και την γην'}])
 
     async def test_add_chapter_verse(self):
         """Tests that adding a chapter and a verse to the.

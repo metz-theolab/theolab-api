@@ -3,7 +3,7 @@
 from backend.tools.sql_client import SQLClient
 import re
 from typing import Optional
-from pymysql.err import IntegrityError
+from asyncpg.exceptions import UniqueViolationError
 from loguru import logger
 
 
@@ -124,7 +124,7 @@ class SCRIBESBaseClient(SQLClient):
         query = self.format_query(f"""
             SELECT group_id
             FROM permissions_traditions
-            WHERE user={username}
+            WHERE permissions_traditions.user={username}
         """)
         usergroup = await self.database.fetch_one(query=query)
         if not usergroup:
@@ -143,10 +143,10 @@ class SCRIBESBaseClient(SQLClient):
             FROM traditions
             LEFT JOIN permissions ON traditions.id = permissions.tradition_id
             WHERE tradition_name = '{tradition}'
-            AND (is_public=1
+            AND (is_public=TRUE
         """
         if user:
-            query += f" OR created_by='{user}' OR user='{user}')"
+            query += f" OR created_by='{user}' OR permissions.user='{user}')"
         else:
             query += ")"
         record = await self.database.fetch_one(query=self.format_query(query))
@@ -334,7 +334,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         except ValueError as e:
             raise ValueError(f"Tradition {tradition} not found.") from e
         query = self.format_query(f"""
-        INSERT INTO permissions (tradition_id, user)
+        INSERT INTO permissions (tradition_id, "user")
         SELECT {tradition_id}, '{username}'
         FROM traditions
         WHERE created_by = '{user}' AND id = {tradition_id};
@@ -370,7 +370,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         try:
             await self.database.execute(query=query)
             logger.info(f"Manuscript {manuscript} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Manuscript {manuscript} already exists for tradition {tradition}.") from e
 
@@ -387,9 +387,9 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(f"Tradition {tradition} not found.") from e
 
         query = self.format_query(f"""
-        DELETE FROM manuscripts WHERE manuscript_name = '{manuscript}' AND tradition_id = {tradition_id} AND created_by = '{user}'""")
+        DELETE FROM manuscripts WHERE manuscript_name = '{manuscript}' AND tradition_id = {tradition_id} AND created_by = '{user}' RETURNING *""")
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Manuscript {manuscript} removed from the database.")
         else:
             logger.info(f"Manuscript {manuscript} not found in the database.")
@@ -422,7 +422,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         try:
             await self.database.execute(query=query)
             logger.info(f"Folio {folio} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Folio {folio} already exists for manuscript {manuscript}") from e
 
@@ -444,10 +444,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(f"Manuscript {manuscript} not found.") from e
         query = self.format_query(f"""
         DELETE FROM folios WHERE folio_name = '{folio}' AND
-        manuscript_id = {manuscript_id} AND created_by = '{user}'
+        manuscript_id = {manuscript_id} AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Folio {folio} removed from the database.")
         else:
             logger.info(f"Folio {folio} not found in the database.")
@@ -464,12 +464,12 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         """
         query = self.format_query(f"""
         INSERT INTO traditions (tradition_name, created_by, note, is_public)
-        VALUES('{tradition}', '{user}', '{note}', {int(is_public)})
+        VALUES('{tradition}', '{user}', '{note}', {is_public})
         """)
         try:
             await self.database.execute(query=query)
             logger.info(f"Tradition {tradition} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(f"Tradition {tradition} already exists.") from e
 
     async def remove_tradition(self,
@@ -479,10 +479,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         Remove a tradition from the database.
         """
         query = self.format_query(f"""
-        DELETE FROM traditions WHERE tradition_name = '{tradition}' AND created_by = '{user}'
+        DELETE FROM traditions WHERE tradition_name = '{tradition}' AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Tradition {tradition} removed from the database.")
         else:
             logger.info(f"Tradition {tradition} not found in the database.")
@@ -506,7 +506,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         try:
             await self.database.execute(query=query)
             logger.info(f"Chapter {chapter} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Chapter {chapter} already exists for tradition {tradition}.") from e
 
@@ -522,10 +522,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         except ValueError as e:
             raise ValueError(f"Tradition {tradition} not found.") from e
         query = self.format_query(f"""
-        DELETE FROM chapters WHERE chapter_number = {chapter} AND tradition_id = {tradition_id} AND created_by = '{user}'
+        DELETE FROM chapters WHERE chapter_number = {chapter} AND tradition_id = {tradition_id} AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Chapter {chapter} removed from the database.")
         else:
             logger.info(f"Chapter {chapter} not found in the database.")
@@ -555,7 +555,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         try:
             await self.database.execute(query=query)
             logger.info(f"Verse {verse} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Verse {verse} already exists for chapter {chapter} in tradition {tradition}.") from e
 
@@ -577,10 +577,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Chapter {chapter} not found for tradition {tradition}.") from e
         query = self.format_query(f"""
-        DELETE FROM verses WHERE verse_number = {verse} AND chapter_id = {chapter_id} AND created_by = '{user}'
+        DELETE FROM verses WHERE verse_number = {verse} AND chapter_id = {chapter_id} AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Verse {verse} removed from the database.")
         else:
             logger.info(f"Verse {verse} not found in the database.")
@@ -613,7 +613,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             await self.database.execute(query=query)
             logger.info(
                 f"Column {position_in_folio} added to the database for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Column {position_in_folio} already exists for folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
 
@@ -636,10 +636,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}.") from e
         query = self.format_query(f"""
-        DELETE FROM columns WHERE position_in_folio = {position_in_folio} AND folio_id = {folio_id} AND created_by = '{user}'
+        DELETE FROM columns WHERE position_in_folio = {position_in_folio} AND folio_id = {folio_id} AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(
                 f"Column {position_in_folio} of folio {folio} for manuscript {manuscript} removed from the database.")
         else:
@@ -677,7 +677,7 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         try:
             await self.database.execute(query=query)
             logger.info(f"Line {position_in_column} added to the database.")
-        except IntegrityError as e:
+        except UniqueViolationError as e:
             raise ValueError(
                 f"Line {position_in_column} already exists for folio {folio} in manuscript {folio} in tradition {tradition}.") from e
 
@@ -703,10 +703,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Column {column_position_in_folio} not found for folio {folio}")
         query = self.format_query(f"""
-        DELETE FROM column_lines WHERE position_in_column = {position_in_column} AND column_id = {column_id} AND created_by = '{user}'
+        DELETE FROM column_lines WHERE position_in_column = {position_in_column} AND column_id = {column_id} AND created_by = '{user}' RETURNING *
         """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(
                 f"Line {position_in_column} removed from the database.")
         else:
@@ -871,10 +871,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Line {line} not found for folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
         query = self.format_query(f"""
-            DELETE FROM line_notes WHERE line_id = {line_id} AND created_by = '{user}'
+            DELETE FROM line_notes WHERE line_id = {line_id} AND created_by = '{user}' RETURNING *
             """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Note removed from the database for line {line}.")
         else:
             logger.info(f"Note not found in the database for line {line}.")
@@ -912,10 +912,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Verse {verse} not found for chapter {chapter} in tradition {tradition}.") from e
         query = self.format_query(f"""
-            DELETE FROM verse_notes WHERE verse_id = {verse_id} AND created_by = '{user}'
+            DELETE FROM verse_notes WHERE verse_id = {verse_id} AND created_by = '{user}' RETURNING *
             """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(f"Note removed from the database for verse {verse}.")
         else:
             logger.info(f"Note not found in the database for verse {verse}.")
@@ -983,10 +983,10 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(f"Reading {reading} not found for line {line} in folio {folio} in manuscript "
                              f"{manuscript} in tradition {tradition}.") from e
         query = self.format_query(f"""
-            DELETE FROM {category}_notes WHERE reading_id = {reading_id} AND created_by = '{user}'
+            DELETE FROM {category}_notes WHERE reading_id = {reading_id} AND created_by = '{user}' RETURNING *
             """)
         records = await self.database.execute(query=query)
-        if records > 0:
+        if records:
             logger.info(
                 f"Note removed from the database for reading {reading}.")
         else:
@@ -1126,7 +1126,7 @@ class SCRIBESFetch(SCRIBESBaseClient):
 
     #TODO : think about fetching rights within the database.
     """
-    async def get_traditions(self, archived: int, user: str):
+    async def get_traditions(self, archived: bool, user: str):
         """Fetch all traditions from the database (as tradition names are unique,
         return unique values).
         """
@@ -1134,14 +1134,14 @@ class SCRIBESFetch(SCRIBESBaseClient):
             SELECT tradition_name
             FROM traditions
             LEFT JOIN permissions ON traditions.id = permissions.tradition_id
-            WHERE archived = {archived} AND (is_public=1 OR created_by='{user}' OR user='{user}')
+            WHERE archived = {archived} AND (is_public=TRUE OR created_by='{user}' OR user='{user}')
         """)
         records = await self.database.fetch_all(query=query)
         if not records:
             raise ValueError("No traditions found in the database.")
         return [record[0] for record in records]
 
-    async def get_traditions_manuscripts(self, tradition: str, archived: int, user: str):
+    async def get_traditions_manuscripts(self, tradition: str, archived: bool, user: str):
         """
         Fetch all manuscripts associated with a tradition.
         """

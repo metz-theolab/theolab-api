@@ -55,6 +55,32 @@ services:
     networks:
       internal:
 
+  scribesdb:
+    image: postgres:latest
+    container_name: scribesdb
+    environment:
+      POSTGRES_USER: ${SCRIBES_DATABASE_USER:-root}
+      POSTGRES_PASSWORD: ${SCRIBES_DATABASE_PASSWORD:-root}
+      POSTGRES_DB: ${SCRIBES_DATABASE_NAME:-scribes}
+    volumes:
+      - ./dump/SCRIBES.sql:/docker-entrypoint-initdb.d/SCRIBES.sql
+    ports:
+      - "5432:5432"
+    networks:
+      internal:
+
+  pgadmin:
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"
+    networks:
+      internal:
 
 networks:
   internal:
+    driver: bridge

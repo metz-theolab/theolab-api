@@ -35,7 +35,7 @@ def create_app(settings: t.Optional[AppSettings] = None,
     # If SCRIBES only mode is set, set scribes to True
     if scribes:
         settings.database_name = "scribes"
-
+        settings.database_uri = "postgresql://root:root@localhost:5432"
     # Create database client according to application settings
     db = APISQLClient(
         settings.database_uri, settings.database_name
