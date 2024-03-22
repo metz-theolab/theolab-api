@@ -1,0 +1,86 @@
+<html>
+
+<head>
+  <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
+  <script>
+    $(document).ready(function () {
+
+      var ws = new WebSocket("ws://localhost:8000/wsedition/BS/A/A");
+      var ws_folio = new WebSocket("ws://localhost:8000/ws/BS/A/A");
+
+      ws.onmessage = function (evt) {
+        var obj = JSON.parse(evt.data);
+        console.log(obj)
+
+        document.getElementById("uname").value = obj.message
+      }
+
+      ws_folio.onmessage = function (evt) {
+        var obj = JSON.parse(evt.data);
+        console.log(obj)
+
+        document.getElementById("full").textContent = obj.message
+      }
+
+
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          // Prevent the Save dialog to open
+          e.preventDefault();
+          // Place your code here
+          console.log('CTRL + S');
+          const body = {
+            "content": document.getElementById("uname").value
+          };
+          console.log(body)
+          $.ajax({
+            url: "http://localhost:8000/BS/A/A/1/10/",
+            type: "POST",
+            data: JSON.stringify(body),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data, status) {
+              console.log(data);
+            },
+            error: function (xhr, textStatus, errorThrown) {
+              console.error("Error:", textStatus, errorThrown);
+            }
+          });
+
+        }
+      })
+    });
+
+    function send_data() {
+      var ws = new WebSocket("ws://localhost:8000/wsedition/BS/A/A");
+      var data = document.getElementById("uname").value;
+      console.log(data)
+
+      ws.onopen = () => ws.send(data);
+    }
+  </script>
+
+</head>
+
+<body>
+  <!DOCTYPE html>
+  <html lang="en">
+
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+
+  <body>
+    <div onclick="post_request()">
+      <i class="fa fa-minus-plus" ></i>
+    </div>
+    <input type="text" id="uname" name="name" oninput="send_data()" />
+
+
+    <script src="index.js"></script>
+  </body>
+
+  </html>
+</body>
+
+</html>

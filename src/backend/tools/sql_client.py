@@ -31,6 +31,16 @@ class SQLClient:
         if not self._database:
             raise RuntimeError("Database is not yet connected.")
         return self._database
+    
+    @property
+    def raw_connection(self) -> t.Any:
+        """Return a raw connection to the database to access underlying asyncpg options."""
+        return self.database.connection().raw_connection
+    
+    async def add_listener(self, channel: str, callback: t.Callable):
+        """Add a listener to the database.
+        """
+        await self.raw_connection.add_listener(channel, callback)
 
     @staticmethod
     def format_query(query: str):

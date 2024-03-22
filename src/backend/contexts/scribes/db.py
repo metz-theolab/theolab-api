@@ -7,113 +7,6 @@ from asyncpg.exceptions import UniqueViolationError
 from loguru import logger
 
 
-ALL_TRADITIONS = ["Siracide", "Isaiah"]
-
-MANUSCRIPTS_PER_TRADITION = {
-    "Siracide": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
-    "Isaiah": ["1QIsaa", "1QIsab", "1QIsac", "1QIsad", "1QIsae", "1QIsaf", "1QIsag", "1QIsah", "1QIsai", "1QIsaj"]
-}
-
-FOLIOS_PER_MANUSCRIPT = {
-    "Siracide": {
-        "A": [
-            {
-                "id": "1",
-                "image": "/path/to/folio"
-            },
-            {
-                "id": "2",
-                "image": "/path/to/folio"
-            }],
-        "B": [{
-            "id": "1",
-            "image": "/path/to/folio"
-        },
-            {
-                "id": "2",
-                "image": "/path/to/folio"
-        }]
-    },
-    "Isaiah": {
-        "1QIsaiah": [
-            {
-                "id": "1",
-                "image": "/path/to/folio"
-            },
-            {
-                "id": "2",
-                "image": "/path/to/folio"
-            }],
-        "2QIsaiah": [{
-            "id": "1",
-            "image": "/path/to/folio"
-        },
-            {
-                "id": "2",
-                "image": "/path/to/folio"
-        }]
-    },
-}
-
-
-FOLIO_CONTENT = {"Siracide": {
-    "A": {"1":
-          {"content":
-                {"1": "content of line 1",
-                    "2": "content of line 2",
-                    "3": "content of line 3",
-                    "4": "content of line 4",
-                    "5": "content of line 5",
-                    "6": "content of line 6"
-                 },
-           "image": "path/to/image",
-           "translation": {
-                    "1": "content of line 1",
-                    "2": "content of line 2",
-                    "3": "content of line 3",
-                    "4": "content of line 4",
-                    "5": "content of line 5",
-                    "6": "content of line 6",
-                }
-           }
-          }
-}
-}
-
-TRADITION_CONTENT = {
-    "Siracide": {"A":
-                 {
-
-                     "1": {
-                         "1":
-                         {
-                             "content": "line content",
-                             "translation": "line translation"}
-                     },
-                     "2": {
-                         "1":
-                         {
-                             "content": "line content",
-                             "translation": "line translation"}
-                     },
-                 },
-                 "B": {
-                     "1": {
-                         "1":
-                         {
-                             "content": "line content 2",
-                             "translation": "line translation"}
-                     },
-                     "2": {
-                         "1":
-                         {
-                             "content": "line content",
-                             "translation": "line translation"}
-                     },
-                 }
-                 }}
-
-
 class SCRIBESBaseClient(SQLClient):
     """Base client for manipulation of SCRIBES data.
     """
@@ -248,6 +141,7 @@ class SCRIBESBaseClient(SQLClient):
         except ValueError as e:
             raise ValueError(
                 f"Folio {folio} not found for manuscript {manuscript} in tradition {tradition}.") from e
+
         query = self.format_query(f"""
             SELECT id
             FROM column_lines
@@ -311,6 +205,7 @@ class SCRIBESBaseClient(SQLClient):
             SELECT id
             FROM columns
             WHERE folio_id = {folio_id}
+            AND position_in_folio = {column_position}
         """)
         record = await self.database.fetch_one(query=query)
         if not record:
@@ -617,12 +512,12 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
             raise ValueError(
                 f"Column {position_in_folio} already exists for folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
 
-    async def add_remove_column(self,
-                                tradition: str,
-                                manuscript: str,
-                                position_in_folio: int,
-                                folio: str,
-                                user: str):
+    async def remove_column(self,
+                            tradition: str,
+                            manuscript: str,
+                            position_in_folio: int,
+                            folio: str,
+                            user: str):
         """Remove a column from the database.
         """
         try:
@@ -758,7 +653,6 @@ class SCRIBESCreateDelete(SCRIBESBaseClient):
         except ValueError as e:
             raise ValueError(
                 f"Line {line} not found for folio {folio} in manuscript {manuscript} in tradition {tradition}.") from e
-
         if chapter:
             if not verse:
                 raise ValueError(
@@ -1131,15 +1025,15 @@ class SCRIBESFetch(SCRIBESBaseClient):
         return unique values).
         """
         query = self.format_query(f"""
-            SELECT tradition_name
+            SELECT tradition_name as name, created_by
             FROM traditions
             LEFT JOIN permissions ON traditions.id = permissions.tradition_id
-            WHERE archived = {archived} AND (is_public=TRUE OR created_by='{user}' OR user='{user}')
+            WHERE archived = {archived} AND (is_public=TRUE OR created_by='{user}' OR permissions.user='{user}')
         """)
         records = await self.database.fetch_all(query=query)
         if not records:
             raise ValueError("No traditions found in the database.")
-        return [record[0] for record in records]
+        return [dict(record) for record in records]
 
     async def get_traditions_manuscripts(self, tradition: str, archived: bool, user: str):
         """
@@ -1177,7 +1071,7 @@ class SCRIBESFetch(SCRIBESBaseClient):
             raise ValueError(
                 f"Manuscript {manuscript} not found for tradition {tradition}.") from e
         query = self.format_query(f"""
-                SELECT folio_name, image_url
+                SELECT folio_name AS name, image_url
                 FROM folios
                 WHERE manuscript_id = {manuscript_id}
         """)
@@ -1204,10 +1098,63 @@ class SCRIBESFetch(SCRIBESBaseClient):
                     grouped_dict[dict_['position_in_folio']] = {}
         return grouped_dict
 
+    async def get_folio(self,
+                             tradition: str,
+                             manuscript: str,
+                             folio: str,
+                             user: str):
+        """Retrieve all the information related to a folio."""
+        try:
+            folio_id = await self.fetch_folio_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                user=user
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Folio {folio} not found for manuscript {manuscript} of tradition {tradition}.") from e
+        query = self.format_query(f"""
+            SELECT folio_name, position_in_manuscript, image_url
+            FROM folios
+            WHERE id = {folio_id}""")
+        record = await self.database.fetch_one(query=query)
+        if not record:
+            raise ValueError(
+                f"No content found for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+        return dict(record)
+    
+    async def get_folio_columns(self,
+                             tradition: str,
+                             manuscript: str,
+                             folio: str,
+                             user: str):
+        """Retrieve all the columns within a folio."""
+        try:
+            folio_id = await self.fetch_folio_id(
+                tradition=tradition,
+                manuscript=manuscript,
+                folio=folio,
+                user=user
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Folio {folio} not found for manuscript {manuscript} of tradition {tradition}.") from e
+        query = self.format_query(f"""
+            SELECT position_in_folio
+            FROM columns
+            WHERE folio_id = {folio_id}""")
+        records = await self.database.fetch_all(query=query)
+        if not records:
+            raise ValueError(
+                f"No content found for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
+        return [dict(record) for record in records]
+
     async def get_folio_readings(self,
                                  tradition: str,
                                  manuscript: str,
                                  folio: str,
+                                 column: int,
                                  user: str):
         """Retrieve all of the readings associated with a folio.
         """
@@ -1227,22 +1174,24 @@ class SCRIBESFetch(SCRIBESBaseClient):
                 FROM readings
                 JOIN column_lines ON readings.line_id = column_lines.id
                 JOIN columns ON column_lines.column_id = columns.id
+                JOIN folios ON columns.folio_id = folios.id
                 WHERE columns.folio_id = {folio_id}
+                AND columns.position_in_folio = {column}
                 ORDER BY column_lines.column_id, position_in_line
         """)
         records = await self.database.fetch_all(query=query)
+
         flattened_dictionary = self.contact_line_dictionary(
             [dict(record) for record in records])
         if not records:
             raise ValueError(
                 f"No content found for folio {folio} of manuscript {manuscript} of tradition {tradition}.")
         return [
-            {"column": key,
-             "line": subkey,
+            {"line": key,
              "content": subvalue
              }
             for key, value in flattened_dictionary.items()
-            for subkey, subvalue in value.items()
+            for _, subvalue in value.items()
         ]
 
 

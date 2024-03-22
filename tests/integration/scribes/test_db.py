@@ -940,7 +940,7 @@ class TestDBFetch(TestSCRIBESClient):
         folios = await self.client.get_manuscripts_folios(manuscript=f"A{self.nbr}",
                                                           tradition=f"Isaiah{self.nbr}",
                                                           user="test_user")
-        self.assertEqual(folios, [{'folio_name': str(self.nbr),
+        self.assertEqual(folios, [{'name': str(self.nbr),
                                    'image_url': 'NULL'}])
 
     async def test_get_folios_missing(self):
