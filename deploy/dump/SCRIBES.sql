@@ -145,6 +145,15 @@ CREATE TABLE morphological_analysis (
     FOREIGN KEY (reading_id) REFERENCES readings(id)
 );
 
+
+CREATE TABLE current_editions (
+    id SERIAL PRIMARY KEY,
+    FOREIGN KEY (folio) REFERENCES folios(id) ON DELETE CASCADE,
+    user VARCHAR(255),
+    modification_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 CREATE OR REPLACE FUNCTION permissions_traditions_before_insert()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -157,3 +166,33 @@ CREATE TRIGGER permissions_traditions_before_insert_trigger
 AFTER INSERT ON traditions
 FOR EACH ROW
 EXECUTE FUNCTION permissions_traditions_before_insert();
+
+
+CREATE OR REPLACE FUNCTION notify_folio_content()
+RETURNS TRIGGER AS $$
+DECLARE payload TEXT;
+BEGIN
+    payload := (
+        WITH sq AS
+        (
+            SELECT readings.reading, folios.folio_name, column_lines.position_in_column AS line_position, columns.position_in_folio AS column_position
+            FROM readings
+            JOIN column_lines ON readings.line_id = column_lines.id
+            JOIN columns ON column_lines.column_id = columns.id
+            JOIN folios ON columns.folio_id = folios.id
+            WHERE columns.folio_id = (SELECT folio_id FROM columns WHERE id = column_id)
+
+        )
+        SELECT json_agg(row_to_json(sq)) FROM sq);
+
+    PERFORM pg_notify('edition', payload);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER reading_update_trigger
+AFTER INSERT ON readings
+FOR EACH ROW
+EXECUTE FUNCTION notify_folio_content();
+

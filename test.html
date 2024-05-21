@@ -1,0 +1,33 @@
+<html>
+<head>
+<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'></script>
+<script>
+$(document).ready(function(){
+
+    var ws = new WebSocket("ws://localhost:8000/ws/BS/A/A");
+
+    ws.onmessage = function(evt) {
+      var obj = JSON.parse(evt.data);
+      console.log(obj)
+
+      document.getElementById("data_field_id").textContent = obj.message
+
+}});
+</script>
+
+</head>
+<body>
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+      </head>
+    
+      <body>
+        <span id="data_field_id">Initial span text</span>
+    
+        <script src="index.js"></script>
+      </body>
+    </html>
+</body>
+</html>

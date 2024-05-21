@@ -14,3 +14,6 @@ dist/
 QD.sql
 meeting_notes*
 **/build
+**/node_modules/**
+**/uploads/**
+test_*.html

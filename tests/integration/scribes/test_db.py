@@ -940,7 +940,7 @@ class TestDBFetch(TestSCRIBESClient):
         folios = await self.client.get_manuscripts_folios(manuscript=f"A{self.nbr}",
                                                           tradition=f"Isaiah{self.nbr}",
                                                           user="test_user")
-        self.assertEqual(folios, [{'folio_name': str(self.nbr),
+        self.assertEqual(folios, [{'name': str(self.nbr),
                                    'image_url': 'NULL'}])
 
     async def test_get_folios_missing(self):
@@ -997,6 +997,66 @@ class TestDBFetch(TestSCRIBESClient):
                                                         user="test_user")
         self.assertEqual(readings, [
                          {'column': 1, 'line': 1, 'content': 'εν αρκη ετελεσεν ο θεος τον ουρανον και την γην'}])
+
+    async def test_get_folio_notes(self):
+        """
+        Test the fetching of notes for a folio.
+        """
+        await self.client.add_tradition(tradition=f"Isaiah{self.nbr}",
+                                        note="Demo tradition",
+                                        is_public=True,
+                                        user="test_user")
+        await self.client.add_manuscript(manuscript=f"A{self.nbr}",
+                                         tradition=f"Isaiah{self.nbr}",
+                                         note="Demo manuscript",
+                                         user="test_user")
+        await self.client.add_folio(manuscript=f"A{self.nbr}",
+                                    tradition=f"Isaiah{self.nbr}",
+                                    folio=f"{self.nbr}",
+                                    position_in_manuscript=1,
+                                    user="test_user")
+        await self.client.add_column(tradition=f"Isaiah{self.nbr}",
+                                     manuscript=f"A{self.nbr}",
+                                     folio=f"{self.nbr}",
+                                     position_in_folio=1,
+                                     user="test_user")
+        # Add 2 lines and notes
+        await self.client.add_line(manuscript=f"A{self.nbr}",
+                                   tradition=f"Isaiah{self.nbr}",
+                                   folio=f"{self.nbr}",
+                                   column_position_in_folio=1,
+                                   position_in_column=1,
+                                   user="test_user")
+        await self.client.add_line_notes(manuscript=f"A{self.nbr}",
+                                         tradition=f"Isaiah{self.nbr}",
+                                         folio=f"{self.nbr}",
+                                         line=1,
+                                         column=1,
+                                         note="This is a note regarding a line",
+                                         user="test_user")
+        await self.client.add_line(manuscript=f"A{self.nbr}",
+                                   tradition=f"Isaiah{self.nbr}",
+                                   folio=f"{self.nbr}",
+                                   column_position_in_folio=1,
+                                   position_in_column=2,
+                                   user="test_user")
+        await self.client.add_line_notes(manuscript=f"A{self.nbr}",
+                                         tradition=f"Isaiah{self.nbr}",
+                                         folio=f"{self.nbr}",
+                                         line=2,
+                                         column=1,
+                                         note="This is another note regarding a line",
+                                         user="test_user")
+        notes = await self.client.get_folio_notes(manuscript=f"A{self.nbr}",
+                                                                 tradition=f"Isaiah{self.nbr}",
+                                                                 folio=f"{self.nbr}",
+                                                                 user="test_user")
+
+        self.assertEqual(
+            notes,
+            {1: {1: 'This is a note regarding a line', 2: 'This is another note regarding a line'}}
+        )
+        
 
     async def test_add_chapter_verse(self):
         """Tests that adding a chapter and a verse to the.
