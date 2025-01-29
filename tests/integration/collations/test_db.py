@@ -3,14 +3,14 @@
 
 import unittest
 from .. import DB_URI, DB_NAME
-from backend.contexts.collations.db import TextClient
+from backend.contexts.collations.db import ParallelsClient
 
 
 class TestRetrieveManuscript(unittest.IsolatedAsyncioTestCase):
     """Mock test of manuscript retrieval.
     """
     async def asyncSetUp(self) -> None:
-        self.client = TextClient(DB_URI, DB_NAME)
+        self.client = ParallelsClient(DB_URI, DB_NAME)
         await self.client.connect()
 
     async def test_retrieve_manuscripts(self):
