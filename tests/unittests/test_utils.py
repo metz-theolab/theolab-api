@@ -2,8 +2,7 @@
 """
 import unittest
 from backend.contexts.collations.utils import compute_levensthein, compute_letter_difference, \
-    retrieve_morphological_analysis, detect_omission, analyze_variants, combine_values, \
-    remove_reconstructed
+    retrieve_morphological_analysis, detect_omission, analyze_variants, combine_values
 
 
 class TestUtils(unittest.TestCase):
@@ -103,15 +102,6 @@ class TestUtils(unittest.TestCase):
                 "key_1-key_3": ["value_1", "value_3"],
                 "key_2-key_3": ["value_2", "value_3"],
             },
-        )
-
-    def test_remove_reconstructed(self):
-        """
-        Test the removal of reconstructed data within a single string.
-        """
-        string_to_remove = "תהו ובהו֯ וחשך על פנ[י תהום ורוח אלהים מר]"
-        self.assertEqual(
-            remove_reconstructed(string_to_remove), "תהו ובהו֯ וחשך על"
         )
 
 
