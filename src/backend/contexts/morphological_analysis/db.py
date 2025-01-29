@@ -1,17 +1,17 @@
 """DB client to retrieve lexicometric information within the QWB-API.
 """
+
 import typing as t
 from backend.tools.sql_client import SQLClient
 
 
 class MorphologicalAnalysisClient(SQLClient):
-    """Manipulate textual data from the SQL database.
-    """
+    """Manipulate textual data from the SQL database."""
 
     def morphological_analysis_reading_query(self, word_reading_ids: t.List[str]):
-        """Build SQL query to retrieve morphological analysis data given a set of word_reading_ids.
-        """
-        return self.format_query(f"""
+        """Build SQL query to retrieve morphological analysis data given a set of word_reading_ids."""
+        return self.format_query(
+            f"""
                 SELECT
                     `language_lemma_form`.`lemma_form` AS `lemma`,
                     `word_class`.`string` AS `word_class`,
@@ -103,15 +103,17 @@ class MorphologicalAnalysisClient(SQLClient):
 
             WHERE `language_sign_cluster_reading_parsing`.`manuscript_sign_cluster_reading_id` IN ({','.join(word_reading_ids)})
             ORDER BY `language_sign_cluster_reading_parsing`.`element_sequence` ASC;
-                """)
+                """
+        )
 
-    def word_readings_query(self,
-                            word: str,
-                            manuscript: t.Optional[str] = None,
-                            column: t.Optional[str] = None,
-                            line: t.Optional[str] = None,):
-        """Given a word, build the request that returns all corresponding reading_ids.
-        """
+    def word_readings_query(
+        self,
+        word: str,
+        manuscript: t.Optional[str] = None,
+        column: t.Optional[str] = None,
+        line: t.Optional[str] = None,
+    ):
+        """Given a word, build the request that returns all corresponding reading_ids."""
         query = f"""
                 SELECT manuscript_sign_cluster_reading.manuscript_sign_cluster_reading_id, manuscript_view.manuscript, manuscript_view.column, manuscript_view.line, manuscript_view.sequence_in_line
                 FROM manuscript_sign_cluster_reading
@@ -127,53 +129,51 @@ class MorphologicalAnalysisClient(SQLClient):
 
         return self.format_query(query)
 
-    async def get_word_readings_query(self, word: str,
-                                      manuscript: t.Optional[str] = None,
-                                      column: t.Optional[str] = None,
-                                      line: t.Optional[str] = None):
-        """Given a word, returns the corresponding readings and their position in the manuscript.
-        """
-        return await self.database.fetch_all(query=self.word_readings_query(word=word,
-                                                                            manuscript=manuscript,
-                                                                            column=column,
-                                                                            line=line))
+    async def get_word_readings_query(
+        self,
+        word: str,
+        manuscript: t.Optional[str] = None,
+        column: t.Optional[str] = None,
+        line: t.Optional[str] = None,
+    ):
+        """Given a word, returns the corresponding readings and their position in the manuscript."""
+        return await self.database.fetch_all(
+            query=self.word_readings_query(
+                word=word, manuscript=manuscript, column=column, line=line
+            )
+        )
 
-    async def get_word_morphological_analysis(self,
-                                              word: str,
-                                              manuscript: t.Optional[str] = None,
-                                              column: t.Optional[str] = None,
-                                              line: t.Optional[str] = None):
-        """Given a word, return all corresponding morphological analysis.
-        """
-        word_readings_results = await self.get_word_readings_query(word=word,
-                                                                   manuscript=manuscript,
-                                                                   column=column,
-                                                                   line=line)
+    async def get_word_morphological_analysis(
+        self,
+        word: str,
+        manuscript: t.Optional[str] = None,
+        column: t.Optional[str] = None,
+        line: t.Optional[str] = None,
+    ):
+        """Given a word, return all corresponding morphological analysis."""
+        word_readings_results = await self.get_word_readings_query(
+            word=word, manuscript=manuscript, column=column, line=line
+        )
         word_readings_info = [dict(result) for result in word_readings_results]
-        reading_ids = [str(dict(reading)['manuscript_sign_cluster_reading_id'])
-                       for reading in word_readings_info]
+        reading_ids = [
+            str(dict(reading)["manuscript_sign_cluster_reading_id"])
+            for reading in word_readings_info
+        ]
         if not reading_ids:
             return []
         else:
             morphological_results = await self.database.fetch_all(
-                query=self.morphological_analysis_reading_query(word_reading_ids=reading_ids))
+                query=self.morphological_analysis_reading_query(
+                    word_reading_ids=reading_ids
+                )
+            )
             # Flatten query results into a dictionary
-            morphological_info = [dict(result)
-                                  for result in morphological_results]
+            morphological_info = [dict(result) for result in morphological_results]
             results = []
 
             for word_reading_info in word_readings_info:
                 results.append({"position": word_reading_info})
                 for morphological_result in morphological_info:
-                    results.append({
-                    "morphological_analysis": morphological_result
-                })
-                    
-            # for morphological_result, word_reading_info in \
-            #         zip(morphological_info, word_readings_info):
-            #     results.append({
-            #         "position": word_reading_info,
-            #         "morphological_analysis": morphological_result
-            #     })
-            
+                    results.append({"morphological_analysis": morphological_result})
+
             return results
