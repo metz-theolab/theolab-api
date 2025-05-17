@@ -10,7 +10,7 @@ from ..contexts import ROUTERS, APISQLClient
 
 
 class OIDCSettings(BaseSettings):
-    enabled: bool = True
+    enabled: bool = False
     issuer_url: str = "http://localhost:8024"
     realm: str = "theolab"
     client_id: str = "qwb-api"

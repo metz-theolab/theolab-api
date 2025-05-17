@@ -24,7 +24,7 @@ jobs:
       # Deploy the docker compose environment
       - name: Deploy docker compose environment to run tests
         run: |
-          cd deploy && docker-compose up -d
+          cd deploy && docker compose up -d
 
       # Install invoke
       - name: Install setuptools and invoke

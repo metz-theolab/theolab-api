@@ -161,10 +161,10 @@ class MorphologicalAnalysisClient(SQLClient):
             morphological_info = [dict(result)
                                   for result in morphological_results]
             results = []
-            for morphological_result, word_reading_info in \
-                    zip(morphological_info, word_readings_info):
-                results.append({
-                    "position": word_reading_info,
+            for word_reading_info in word_readings_info:
+                results.append({"position": word_reading_info})
+                for morphological_result in morphological_info:
+                    results.append({
                     "morphological_analysis": morphological_result
                 })
             return results
