@@ -154,16 +154,17 @@ class MorphologicalAnalysisClient(SQLClient):
         if not reading_ids:
             return []
         else:
-            results = {}
+            results = []
             for reading_result in word_readings_info:
-
+                sub_result = {}
                 morphological_results = await self.database.fetch_all(
                     query=self.morphological_analysis_reading_query(word_reading_ids=[str((reading_result["manuscript_sign_cluster_reading_id"]))])
                     )
                 morphological_info = [dict(result)
                                   for result in morphological_results]
-                results.update({"position": reading_result})
-                results["morphological_analysis"] = {}
+                sub_result.update({"position": reading_result})
+                sub_result["morphological_analysis"] = {}
                 for ix, morphological_result in enumerate(morphological_info):
-                    results["morphological_analysis"][f"word_{ix+1}"] = morphological_result
+                    sub_result["morphological_analysis"][f"word_{ix+1}"] = morphological_result
+                results.append(sub_result)
             return results
