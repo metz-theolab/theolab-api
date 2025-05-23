@@ -6,7 +6,6 @@ from fastapi import APIRouter, Request, Depends, Response
 from backend.api.oidc.provider import check_user
 from backend.settings.settings import QWB_READ_ROLE, QWB_CLIENT_ID
 
-
 def sql_database(request: Request):
     """Access the mongo database from a Starlette/FastAPI request"""
     return request.app.state.database

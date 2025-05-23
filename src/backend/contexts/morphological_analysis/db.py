@@ -3,7 +3,6 @@
 import typing as t
 from backend.tools.sql_client import SQLClient
 
-
 class MorphologicalAnalysisClient(SQLClient):
     """Manipulate textual data from the SQL database.
     """
@@ -155,16 +154,16 @@ class MorphologicalAnalysisClient(SQLClient):
         if not reading_ids:
             return []
         else:
-            morphological_results = await self.database.fetch_all(
-                query=self.morphological_analysis_reading_query(word_reading_ids=reading_ids))
-            # Flatten query results into a dictionary
-            morphological_info = [dict(result)
+            results = {}
+            for reading_result in word_readings_info:
+
+                morphological_results = await self.database.fetch_all(
+                    query=self.morphological_analysis_reading_query(word_reading_ids=[str((reading_result["manuscript_sign_cluster_reading_id"]))])
+                    )
+                morphological_info = [dict(result)
                                   for result in morphological_results]
-            results = []
-            for word_reading_info in word_readings_info:
-                results.append({"position": word_reading_info})
-                for morphological_result in morphological_info:
-                    results.append({
-                    "morphological_analysis": morphological_result
-                })
+                results.update({"position": reading_result})
+                results["morphological_analysis"] = {}
+                for ix, morphological_result in enumerate(morphological_info):
+                    results["morphological_analysis"][f"word_{ix+1}"] = morphological_result
             return results
