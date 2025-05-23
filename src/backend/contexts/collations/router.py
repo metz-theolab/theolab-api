@@ -44,7 +44,9 @@ async def available_parallels(
     user=check_user(expected_roles=[QWB_READ_ROLE], client_id=QWB_CLIENT_ID),
 ):
     """Retrieve all parallels associated with a tradition, a chapter and a verse."""
-    results = await database.get_parallels(name=tradition, chapter=chapter, verse=verse)
+    results = await database.get_parallels(name=tradition,
+                                           chapter=chapter,
+                                           verse=verse)
     return Response(
         content=json.dumps({"parallels": results}, ensure_ascii=False).encode("utf8"),
         media_type="application/json",

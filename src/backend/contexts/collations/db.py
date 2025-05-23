@@ -353,7 +353,9 @@ class ParallelsClient(SQLClient):
         """Get all the parallels as a dictionary of manuscript name and text.
         """
         records = await self.database.fetch_all(query=self.parallel_query(name, chapter, verse))
-        return list(set([dict(record)["manuscript"] for record in records]))
+        dict_records = list([dict(record) for record in records])
+        filtered_dict_records = [{k: record[k] for k in ["manuscript", "column", "line"]} for record in dict_records]
+        return [dict(t) for t in {tuple(d.items()) for d in filtered_dict_records}]
 
     async def get_parallels_content(self,
                                     name: str,
